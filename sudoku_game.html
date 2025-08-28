@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            /* --- Theme Variables --- */
+            /* Default Theme: Ocean */
+            --bg-gradient-start: #6dd5ed;
+            --bg-gradient-end: #2193b0;
+            --game-container-bg: rgba(255, 255, 255, 0.25);
+            --board-border-color: #fff;
+            --cell-border-color: rgba(255, 255, 255, 0.5);
+            --cell-pre-filled-bg: rgba(255, 255, 255, 0.1);
+            --cell-pre-filled-color: #ffffff;
+            --cell-user-filled-color: #f0e68c;
+            --cell-selected-bg: rgba(255, 215, 0, 0.5);
+            --cell-selected-shadow: rgba(255, 215, 0, 0.5);
+            --cell-incorrect-bg: rgba(255, 77, 77, 0.6);
+            --text-primary-color: #ffffff;
+            --text-secondary-color: #fff;
+            --timer-bg: rgba(0,0,0,0.2);
+            --button-primary-bg: #FFD700;
+            --button-primary-text: #333;
+            --button-secondary-bg: rgba(255, 255, 255, 0.2);
+            --button-secondary-text: #fff;
+            --button-secondary-border: rgba(255, 255, 255, 0.4);
+            --button-active-bg: #FFD700;
+            --button-active-text: #333;
+            --floating-number-color: rgba(255, 255, 255, 0.15);
+
+            font-family: 'Architects Daughter', cursive, 'Segoe UI', Tahoma, Geneva, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #eef1f5;
+            margin: 0;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+        }
+
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative; /* For overlay positioning */
+            background-color: var(--game-container-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            border-radius: 15px; /* Match game-container */
+            z-index: 100;
+        }
+
+        .game-over-overlay.show {
+            display: flex;
+        }
+
+        .game-over-content h2 {
+            font-size: 2.5em;
+            color: var(--text-primary-color);
+            margin-bottom: 20px;
+        }
+
+        .game-over-content button {
+            padding: 15px 30px;
+            font-size: 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Architects Daughter', cursive;
+            font-weight: bold;
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .game-over-content button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        h1 {
+            color: var(--text-primary-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-top: 0;
+            font-size: 3em;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            color: var(--text-secondary-color);
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        #timer {
+            font-weight: bold;
+            background: var(--timer-bg);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #mistakes-display {
+            font-weight: bold;
+            background: var(--timer-bg);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 540px;
+            max-height: 540px;
+            margin: 20px auto;
+            border: 3px solid var(--board-border-color);
+            background: transparent;
+            font-size: clamp(1.5rem, 5vmin, 2.5rem);
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--cell-border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        /* Add thicker borders for 3x3 subgrids */
+        .cell:nth-child(3n) {
+            border-right: 3px solid var(--board-border-color);
+        }
+        .cell:nth-child(9n) {
+            border-right: none;
+        }
+        .row-start {
+             border-top: 3px solid var(--board-border-color);
+        }
+
+        .cell.pre-filled {
+            background-color: var(--cell-pre-filled-bg);
+            font-weight: bold;
+            color: var(--cell-pre-filled-color);
+            cursor: not-allowed;
+        }
+
+        .cell.user-filled {
+            color: var(--cell-user-filled-color);
+            font-weight: bold;
+        }
+
+        .cell.selected {
+            background-color: var(--cell-selected-bg);
+             animation: pulse 1.5s infinite;
+        }
+
+        .cell.incorrect {
+            background-color: var(--cell-incorrect-bg);
+            color: var(--text-primary-color);
+            animation: shake 0.5s;
+        }
+
+        #number-palette {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .number {
+            width: 45px;
+            height: 45px;
+            border: 2px solid var(--cell-border-color);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, transform 0.2s;
+            color: var(--text-secondary-color);
+        }
+
+        .number:hover, .number.selected {
+            background-color: var(--button-active-bg);
+            color: var(--button-active-text);
+            border-color: var(--button-active-bg);
+        }
+
+        .controls button, .difficulty-controls button, .theme-controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s, border-color 0.2s;
+            font-family: 'Architects Daughter', cursive;
+            font-weight: bold;
+            text-shadow: none;
+        }
+
+        .controls button {
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .controls button:hover, .difficulty-controls button:hover, .theme-controls button:hover {
+            transform: translateY(-2px);
+        }
+
+        .controls button:hover {
+            background-color: var(--button-active-bg);
+            filter: brightness(1.1);
+        }
+
+        .difficulty-controls {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .difficulty-controls button {
+            background-color: var(--button-secondary-bg);
+            color: var(--button-secondary-text);
+            border: 1px solid var(--button-secondary-border);
+        }
+
+        .difficulty-controls button:hover, .theme-controls button:hover {
+            background-color: var(--button-secondary-bg);
+            filter: brightness(1.2);
+        }
+
+        .theme-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: var(--game-container-bg);
+            padding: 20px 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .theme-controls button {
+            width: 100px;
+        }
+
+        .difficulty-controls button.active, .theme-controls button.active {
+            background-color: var(--button-active-bg);
+            color: var(--button-active-text);
+            border-color: var(--button-active-bg);
+        }
+
+        #message-area {
+            margin-top: 15px;
+            min-height: 24px;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-secondary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 var(--cell-selected-shadow); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell-pop {
+            animation: pop-in 0.3s ease-out;
+        }
+
+        /* --- Floating Numbers Animation --- */
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .background-container div {
+            position: absolute;
+            display: block;
+            color: var(--floating-number-color);
+            font-weight: bold;
+            animation: float 25s linear infinite;
+            bottom: -150px;
+        }
+
+        @keyframes matrix-rain {
+            0% {
+                transform: translateY(-10vh);
+            }
+            100% {
+                transform: translateY(110vh);
+            }
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .background-container div span {
+            display: inline-block;
+        }
+
+        .background-container div:nth-child(1) { left: 25%; font-size: 80px; animation-delay: 0s; }
+        .background-container div:nth-child(2) { left: 10%; font-size: 20px; animation-delay: 2s; animation-duration: 12s; }
+        .background-container div:nth-child(3) { left: 70%; font-size: 20px; animation-delay: 4s; }
+        .background-container div:nth-child(4) { left: 40%; font-size: 60px; animation-delay: 0s; animation-duration: 18s; }
+        .background-container div:nth-child(5) { left: 65%; font-size: 20px; animation-delay: 0s; }
+        .background-container div:nth-child(6) { left: 75%; font-size: 110px; animation-delay: 3s; }
+        .background-container div:nth-child(7) { left: 35%; font-size: 150px; animation-delay: 7s; }
+        .background-container div:nth-child(8) { left: 50%; font-size: 25px; animation-delay: 15s; animation-duration: 45s; }
+        .background-container div:nth-child(9) { left: 20%; font-size: 15px; animation-delay: 2s; animation-duration: 35s; }
+        .background-container div:nth-child(10) { left: 85%; font-size: 150px; animation-delay: 0s; animation-duration: 11s; }
+
+        /* --- Theme-specific Backgrounds --- */
+        .theme-ocean .background-container div span { display: none; }
+        .theme-ocean .background-container div {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        .theme-forest .background-container div span { display: none; }
+        .theme-forest .background-container div {
+            animation-name: fall; /* Override the default 'float' animation */
+        }
+        .theme-forest .background-container div::before {
+            content: '☘';
+            display: inline-block;
+        }
+
+        /* --- Forest Theme --- */
+        body.theme-forest {
+            --bg-gradient-start: #a8e063;
+            --bg-gradient-end: #56ab2f;
+            --cell-user-filled-color: #ffecb3;
+            --cell-selected-bg: rgba(255, 165, 0, 0.5);
+            --cell-selected-shadow: rgba(255, 165, 0, 0.5);
+            --button-primary-bg: #f9a825;
+            --button-primary-text: #fff;
+            --button-secondary-bg: rgba(0, 0, 0, 0.2);
+            --button-active-bg: #f9a825;
+            --button-active-text: #fff;
+        }
+
+        /* --- Love Theme --- */
+        body.theme-love {
+            --bg-gradient-start: #ffafbd;
+            --bg-gradient-end: #ffc3a0;
+            --cell-user-filled-color: #c94b4b;
+            --cell-selected-bg: rgba(255, 255, 255, 0.7);
+            --cell-selected-shadow: rgba(224, 8, 8, 0.5);
+            --button-primary-bg: #d6336c;
+            --button-primary-text: #fff;
+            --button-secondary-bg: rgba(255, 255, 255, 0.3);
+            --button-active-bg: #d6336c;
+            --button-active-text: #fff;
+            --floating-number-color: rgba(255, 255, 255, 0.5);
+        }
+        .theme-love .background-container div span { display: none; }
+        .theme-love .background-container div::before {
+            content: '♥';
+            display: inline-block;
+        }
+
+        /* --- Classic Theme --- */
+        body.theme-classic {
+            --bg-gradient-start: #e0e0e0;
+            --bg-gradient-end: #ffffff;
+            --game-container-bg: rgba(255, 255, 255, 0.8);
+            --board-border-color: #333;
+            --cell-border-color: #ccc;
+            --cell-pre-filled-bg: #f0f2f5;
+            --cell-pre-filled-color: #333;
+            --cell-user-filled-color: #007bff;
+            --cell-selected-bg: #a8d5ff;
+            --cell-selected-shadow: rgba(0, 123, 255, 0.5);
+            --cell-incorrect-bg: #ffdddd;
+            --text-primary-color: #333;
+            --text-secondary-color: #333;
+            --timer-bg: rgba(0,0,0,0.1);
+            --button-primary-bg: #28a745;
+            --button-primary-text: #fff;
+            --button-secondary-bg: #6c757d;
+            --button-secondary-text: #fff;
+            --button-secondary-border: #6c757d;
+            --button-active-bg: #007bff;
+            --button-active-text: #fff;
+            --floating-number-color: rgba(0, 0, 0, 0.05);
+        }
+        .theme-classic .game-container {
+            backdrop-filter: none;
+        }
+
+        /* --- Matrix Theme --- */
+        body.theme-matrix {
+            font-family: 'Share Tech Mono', monospace;
+            --bg-gradient-start: #000000;
+            --bg-gradient-end: #0d0d0d;
+            --game-container-bg: rgba(0, 255, 0, 0.05);
+            --board-border-color: #0f0;
+            --cell-border-color: rgba(0, 255, 0, 0.3);
+            --cell-pre-filled-bg: rgba(0, 255, 0, 0.1);
+            --cell-pre-filled-color: #0f0;
+            --cell-user-filled-color: #afa;
+            --cell-selected-bg: rgba(0, 255, 0, 0.2);
+            --cell-selected-shadow: rgba(0, 255, 0, 0.5);
+            --cell-incorrect-bg: rgba(255, 0, 0, 0.5);
+            --text-primary-color: #0f0;
+            --text-secondary-color: #0f0;
+            --timer-bg: rgba(0, 255, 0, 0.1);
+            --button-primary-bg: #0f0;
+            --button-primary-text: #000;
+            --button-secondary-bg: transparent;
+            --button-secondary-text: #0f0;
+            --button-secondary-border: #0f0;
+            --button-active-bg: #0f0;
+            --button-active-text: #000;
+            --floating-number-color: rgba(0, 255, 0, 0.15);
+        }
+        .theme-matrix h1, .theme-matrix button {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .theme-matrix .background-container div span {
+            display: none; /* Hide the default number/heart */
+        }
+
+        .theme-matrix .background-container div {
+            /* Override default float animation */
+            animation-name: matrix-rain;
+            animation-timing-function: linear;
+            
+            /* Override positioning */
+            top: 0;
+            bottom: auto;
+
+            /* Style for rain */
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 1.2rem;
+            color: var(--cell-pre-filled-color);
+            text-shadow: 0 0 5px #0f0, 0 0 10px #0f0;
+            line-height: 1.5rem;
+        }
+
+        .theme-matrix .background-container div:nth-child(1)::before { content: '011011000110111101101111011010110111001100100000011000100110010101110100011101000110010101110010'; animation-duration: 10s; animation-delay: -5s; }
+        .theme-matrix .background-container div:nth-child(2)::before { content: '1001011010110101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101'; animation-duration: 8s; animation-delay: -2s; }
+        .theme-matrix .background-container div:nth-child(3)::before { content: '00101101011100100110000101101110011001000110111101101101001000000111001101100101011100010111010101100101011011100110001101100101'; animation-duration: 12s; animation-delay: -10s; }
+        .theme-matrix .background-container div:nth-child(4)::before { content: '1110101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010'; animation-duration: 7s; animation-delay: -1s; }
+        .theme-matrix .background-container div:nth-child(5)::before { content: '0110110101101111011100100110010100100000011000100110010101100001011101010111010001101001011001100111010101101100'; animation-duration: 9s; animation-delay: -7s; }
+        .theme-matrix .background-container div:nth-child(6)::before { content: '110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110110'; animation-duration: 11s; animation-delay: -3s; }
+        .theme-matrix .background-container div:nth-child(7)::before { content: '001101001011011100110000101110010011110010010000001100110011011110111001001100101011101100110010101110010'; animation-duration: 8.5s; animation-delay: -8s; }
+        .theme-matrix .background-container div:nth-child(8)::before { content: '100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100'; animation-duration: 13s; animation-delay: -12s; }
+        .theme-matrix .background-container div:nth-child(9)::before { content: '010101110110010101101100011000110110111101101101011001010010000001110100011011110010000001110100011010000110010100100000011011010110000101110100011100100110100101111000'; animation-duration: 9.5s; animation-delay: -4s; }
+        .theme-matrix .background-container div:nth-child(10)::before { content: '1111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000111100001111000011110000'; animation-duration: 10.5s; animation-delay: -6s; }
+    </style>
+</head>
+<body>
+
+<div class="background-container">
+    <div><span>1</span></div>
+    <div><span>8</span></div>
+    <div><span>3</span></div>
+    <div><span>5</span></div>
+    <div><span>9</span></div>
+    <div><span>2</span></div>
+    <div><span>7</span></div>
+    <div><span>4</span></div>
+    <div><span>6</span></div>
+    <div><span>8</span></div>
+</div>
+
+<div class="page-wrapper">
+    <div class="game-container">
+        <h1>Sudoku</h1>
+        <div class="game-info">
+            <div id="mistakes-display">Mistakes: 0 / 5</div>
+            <div id="difficulty-display">Difficulty: Medium</div>
+            <div id="timer">00:00</div>
+        </div>
+        <div class="difficulty-controls">
+            <button class="difficulty-btn" data-difficulty="easy">Easy</button>
+            <button class="difficulty-btn" data-difficulty="medium">Medium</button>
+            <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+        </div>
+        <div id="sudoku-board"></div>
+        <div id="number-palette"></div>
+        <div class="controls">
+            <button id="hint-button">Hint</button>
+            <button id="check-button">Check Solution</button>
+            <button id="new-game-button">New Game</button>
+            <button id="music-button">Play Music</button>
+        </div>
+        <div id="message-area"></div>
+        <div id="game-over-overlay" class="game-over-overlay">
+            <div class="game-over-content">
+                <h2>Game Finished</h2>
+                <button id="restart-game-button">Start New Game</button>
+            </div>
+        </div>
+    </div>
+    <div class="theme-controls">
+        <button class="theme-btn" data-theme="ocean">Ocean</button>
+        <button class="theme-btn" data-theme="forest">Forest</button>
+        <button class="theme-btn" data-theme="classic">Classic</button>
+        <button class="theme-btn" data-theme="love">Love</button>
+        <button class="theme-btn" data-theme="matrix">Matrix</button>
+    </div>
+</div>
+
+<!-- Audio files - replace # with your file paths -->
+<audio id="tap-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_2c183d9282.mp3" preload="auto"></audio>
+<audio id="bg-music" src="https://cdn.pixabay.com/audio/2022/11/11/audio_a2b32bce22.mp3" loop preload="auto"></audio>
+
+<script>
+    const boardElement = document.getElementById('sudoku-board');
+    const paletteElement = document.getElementById('number-palette');
+    const checkButton = document.getElementById('check-button');
+    const newGameButton = document.getElementById('new-game-button');
+    const messageArea = document.getElementById('message-area');
+    const hintButton = document.getElementById('hint-button');
+    const musicButton = document.getElementById('music-button');
+    const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+    const themeBtns = document.querySelectorAll('.theme-btn');
+    const difficultyDisplay = document.getElementById('difficulty-display');
+    const timerElement = document.getElementById('timer');
+    const mistakesDisplay = document.getElementById('mistakes-display');
+    const tapSound = document.getElementById('tap-sound');
+    const bgMusic = document.getElementById('bg-music');
+    const gameOverOverlay = document.getElementById('game-over-overlay');
+    const restartGameButton = document.getElementById('restart-game-button');
+
+    const puzzles = {
+        easy: [
+            { board: "000260701680070090190004500820100040004602900050003028009300074040050036703018000", solution: "435269781682571493197834562826195347374682915951743628519326874248957136763418259" },
+            { board: "200080300060070084034000200000904070000605000010802000001000540540020060002040008", solution: "275481396169273584834596217328914675497658123615872439781369542543728961952146873" },
+            { board: "000000012000039000300800007001000080070060020040000300900002004000710000650000000", solution: "769548312528139647314826597231475986875963124496281375983652741152714869647398251" },
+            { board: "003000000000190730000008000000000081070000040250000000000400000064073000000002000", solution: "723654819486197235519238674395746281678321945254987361937415826864573192142869753" },
+            { board: "000003001010000020002010500000008000030040050000600000004050700060000080700100000", solution: "456823971918574623372916548127598463839741256645237819284359761561472389793165428" }
+        ],
+        medium: [
+            { board: "530070000600195000098000060800060003400803001700020006060000280000419005000080079", solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179" },
+            { board: "003020600900305001001806400008102900700000008006708200002609500800203009005010300", solution: "483921657967345821251876493548132976729564138136798245372689514814253769695417382" },
+            { board: "0000060000590000080000435001000000000000800000000000006001870000300000091000004000", solution: "417956238259137468836243519175362984964581723283794156791875342342618591586429713" },
+            { board: "000000000000005908001000070000030000002080100000060000050000300107800000000000000", solution: "726918435345725968891643572518437629632189154479562813254876391167394285983251746" },
+            { board: "000003400000009000007000010000000002000050000400000000010000500000800000002700000", solution: "158623497236149851947582613761938542893254176425716938514367289679821354382795164" }
+        ],
+        hard: [
+            { board: "000000000000003085001020000000507000004000100090000000500000073002010000000040009", solution: "287654319963178245451923678178537492324896157695241830519482763832719546746365981" },
+            { board: "000000010400002000003000005000400000005060700000008000100000500000800009060000000", solution: "682795413491632875753184265316479582825361794974258631138926547247815369569347128" },
+            { board: "000000000000070500001002000000010060050000030040080000000500400003020000000000000", solution: "538649271926371584471852693387415962159267834642983715715596428893724156264138975" },
+            { board: "800000000003600000070090200050007000000045700000100030001000068008500010090000400", solution: "812753649943682175675491283154237896369845721287169534521974368438526917796318452" },
+            { board: "000005010070000000000000000000000000000000000000000000000000000000000000000000000", solution: "346875219278194635159236874712583496485769123963412758691328547824657913537941268" }
+        ]
+    };
+
+    let boardState = [];
+    let solutionState = [];
+    let selectedCell = null;
+    let selectedNumber = null;
+    let currentDifficulty = 'medium';
+    let timerInterval;
+    let startTime;
+    let hintCount;
+    let wrongAttempts;
+    let isGameOver = false;
+    let timeLimit;
+
+    const MAX_WRONG_ATTEMPTS = 5;
+
+    const timeLimits = {
+        easy: 300,   // 5 minutes
+        medium: 450,  // 7 minutes 30 seconds
+        hard: 600    // 10 minutes
+    };
+
+    function initializeGame(difficulty = currentDifficulty) {
+        gameOverOverlay.classList.remove('show');
+        currentDifficulty = difficulty;
+        difficultyDisplay.textContent = `Difficulty: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`;
+
+        // Update active button style
+        updateActiveButton(difficulty, difficultyBtns, 'difficulty');
+
+        const puzzlePool = puzzles[difficulty];
+        const puzzleData = puzzlePool[Math.floor(Math.random() * puzzlePool.length)];
+        timeLimit = timeLimits[difficulty];
+        hintCount = 5;
+        hintButton.textContent = `Hint (${hintCount})`;
+        wrongAttempts = 0;
+        mistakesDisplay.textContent = `Mistakes: ${wrongAttempts} / ${MAX_WRONG_ATTEMPTS}`;
+        isGameOver = false;
+        checkButton.disabled = false;
+        hintButton.disabled = false;
+        boardState = puzzleData.board.split('').map(c => parseInt(c));
+        solutionState = puzzleData.solution.split('').map(c => parseInt(c));
+        selectedCell = null;
+        selectedNumber = null;
+        messageArea.textContent = '';
+        renderBoard();
+        renderPalette();
+        startTimer();
+    }
+
+    function renderBoard() {
+        boardElement.innerHTML = '';
+        for (let i = 0; i < 81; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.index = i;
+
+            // Add classes for thick borders
+            if (Math.floor(i / 9) % 3 === 0 && i > 8) {
+                cell.classList.add('row-start');
+            }
+
+            const value = boardState[i];
+            if (value !== 0) {
+                cell.textContent = value;
+                cell.classList.add('pre-filled');
+            } else {
+                cell.addEventListener('click', handleCellClick);
+            }
+            boardElement.appendChild(cell);
+        }
+    }
+
+    function renderPalette() {
+        paletteElement.innerHTML = '';
+        for (let i = 1; i <= 9; i++) {
+            const numElement = document.createElement('div');
+            numElement.classList.add('number');
+            numElement.textContent = i;
+            numElement.dataset.number = i;
+            numElement.addEventListener('click', handlePaletteClick);
+            paletteElement.appendChild(numElement);
+        }
+        const eraseElement = document.createElement('div');
+        eraseElement.classList.add('number');
+        eraseElement.textContent = 'X';
+        eraseElement.dataset.number = 0; // 0 for erase
+        eraseElement.addEventListener('click', handlePaletteClick);
+        paletteElement.appendChild(eraseElement);
+    }
+
+    function playTapSound() {
+        tapSound.currentTime = 0;
+        tapSound.play().catch(e => console.warn("Could not play tap sound:", e));
+    }
+
+    function handleCellClick(event) {
+        if (isGameOver) return;
+
+        const clickedCell = event.target;
+        // Deselect previous cell
+        if (selectedCell) {
+            selectedCell.classList.remove('selected');
+        }
+        // Select new cell
+        selectedCell = clickedCell;
+        selectedCell.classList.add('selected');
+
+        if (selectedNumber !== null) {
+            placeNumber();
+        }
+        playTapSound();
+    }
+
+    function handlePaletteClick(event) {
+        if (isGameOver) return;
+
+        const clickedNumber = event.target;
+        // Deselect previous number
+        document.querySelectorAll('.number.selected').forEach(n => n.classList.remove('selected'));
+        
+        selectedNumber = parseInt(clickedNumber.dataset.number);
+        clickedNumber.classList.add('selected');
+
+        if (selectedCell) {
+            placeNumber();
+        }
+        playTapSound();
+    }
+
+    function findConflictIndices(index, num) {
+        const conflicts = new Set();
+        if (num === 0) return []; // Erasing never causes a conflict
+
+        const row = Math.floor(index / 9);
+        const col = index % 9;
+
+        // Check row
+        for (let i = 0; i < 9; i++) {
+            const peerIndex = row * 9 + i;
+            if (peerIndex !== index && boardState[peerIndex] === num) {
+                conflicts.add(peerIndex);
+            }
+        }
+
+        // Check column
+        for (let i = 0; i < 9; i++) {
+            const peerIndex = i * 9 + col;
+            if (peerIndex !== index && boardState[peerIndex] === num) {
+                conflicts.add(peerIndex);
+            }
+        }
+
+        // Check 3x3 box
+        const startRow = row - row % 3;
+        const startCol = col - col % 3;
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const peerIndex = (startRow + r) * 9 + (startCol + c);
+                if (peerIndex !== index && boardState[peerIndex] === num) {
+                    conflicts.add(peerIndex);
+                }
+            }
+        }
+        return Array.from(conflicts);
+    }
+
+    function placeNumber() {
+        if (!selectedCell || selectedNumber === null || isGameOver) return;
+
+        const index = parseInt(selectedCell.dataset.index);
+        const previousValue = boardState[index];
+
+        if (selectedNumber !== previousValue) {
+            // Clear previous messages and temporary highlights
+            messageArea.textContent = '';
+            document.querySelectorAll('.cell.incorrect').forEach(c => c.classList.remove('incorrect'));
+            
+            if (selectedNumber === 0) { // Erase
+                boardState[index] = 0;
+                selectedCell.classList.remove('user-filled');
+                selectedCell.textContent = '';
+            } else { // Attempt to place a number
+                const conflictIndices = findConflictIndices(index, selectedNumber);
+
+                if (conflictIndices.length > 0) {
+                    wrongAttempts++;
+                    mistakesDisplay.textContent = `Mistakes: ${wrongAttempts} / ${MAX_WRONG_ATTEMPTS}`;
+
+                    selectedCell.classList.add('shake');
+                    selectedCell.addEventListener('animationend', () => selectedCell.classList.remove('shake'), { once: true });
+
+                    if (wrongAttempts >= MAX_WRONG_ATTEMPTS) {
+                        handleGameOver("Too many mistakes.");
+                        conflictIndices.forEach(i => boardElement.children[i].classList.add('incorrect'));
+                        // Fall through to deselect the number even on game over.
+                    } else {
+                        messageArea.style.color = '#FF6347'; // Tomato
+                        messageArea.textContent = 'Wrong number inputed';
+                        
+                        conflictIndices.forEach(i => boardElement.children[i].classList.add('incorrect'));
+                        setTimeout(() => {
+                            conflictIndices.forEach(i => boardElement.children[i].classList.remove('incorrect'));
+                            if (messageArea.textContent === 'Wrong number inputed') messageArea.textContent = '';
+                        }, 1500);
+                    }
+                } else {
+                    // No conflict, place the number
+                    boardState[index] = selectedNumber;
+                    selectedCell.textContent = selectedNumber;
+                    selectedCell.classList.add('user-filled');
+                    selectedCell.classList.add('cell-pop');
+                    selectedCell.addEventListener('animationend', () => {
+                        selectedCell.classList.remove('cell-pop');
+                    }, { once: true });
+
+                    // If the number is correct, lock the cell
+                    if (boardState[index] === solutionState[index]) {
+                        selectedCell.classList.remove('user-filled');
+                        selectedCell.classList.add('pre-filled'); // Use pre-filled style for locked cells
+                        selectedCell.removeEventListener('click', handleCellClick);
+                    }
+                }
+            }
+        }
+
+        // After any placement attempt (success, fail, erase, or no-op), deselect the number.
+        document.querySelectorAll('.number.selected').forEach(n => n.classList.remove('selected'));
+        selectedNumber = null;
+    }
+
+    function checkSolution() {
+        if (isGameOver) return;
+
+        playTapSound();
+        let isComplete = true;
+        let hasErrors = false;
+        stopTimer(); // Stop timer to check
+
+        messageArea.textContent = '';
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('incorrect'));
+
+        for (let i = 0; i < 81; i++) {
+            if (boardState[i] === 0) {
+                isComplete = false;
+            } else if (boardState[i] !== solutionState[i]) {
+                hasErrors = true;
+                // Highlight only user-filled incorrect cells
+                if (!boardElement.children[i].classList.contains('pre-filled')) {
+                    boardElement.children[i].classList.add('incorrect');
+                }
+            }
+        }
+
+        if (isComplete && !hasErrors) {
+            messageArea.style.color = '#90EE90'; // LightGreen
+            messageArea.textContent = 'Congratulations! You solved it!';
+        } else if (hasErrors) {
+            messageArea.style.color = '#FF6347'; // Tomato
+            messageArea.textContent = 'There are some mistakes. Keep trying!';
+            startTimer(); // Resume timer if not solved
+        } else {
+            messageArea.style.color = '#fff';
+            messageArea.textContent = 'Looking good, but not quite finished yet.';
+            startTimer(); // Resume timer if not solved
+        }
+    }
+
+    function giveHint() {
+        if (isGameOver) return;
+
+        playTapSound();
+        if (hintCount <= 0) {
+            messageArea.textContent = "You are out of hints!";
+            return;
+        }
+
+        const emptyCells = [];
+        for (let i = 0; i < 81; i++) {
+            if (boardState[i] === 0) {
+                emptyCells.push(i);
+            }
+        }
+
+        if (emptyCells.length > 0) {
+            const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            const correctValue = solutionState[randomIndex];
+
+            boardState[randomIndex] = correctValue;
+            const cellEl = boardElement.children[randomIndex];
+            cellEl.textContent = correctValue;
+            // A hint is always correct, so lock it immediately.
+            cellEl.classList.add('pre-filled');
+            cellEl.removeEventListener('click', handleCellClick);
+
+            hintCount--;
+            hintButton.textContent = `Hint (${hintCount})`;
+            if (hintCount <= 0) {
+                hintButton.disabled = true;
+            }
+
+        } else {
+            messageArea.textContent = "Board is full, no hints available.";
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function updateTimer() {
+        const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+        const timeRemaining = timeLimit - elapsedTime;
+
+        if (timeRemaining <= 0) {
+            handleGameOver("Time's up!");
+            return; // Stop further execution
+        }
+
+        const minutes = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+        const seconds = (timeRemaining % 60).toString().padStart(2, '0');
+        timerElement.textContent = `${minutes}:${seconds}`;
+    }
+
+    function handleGameOver(msg) {
+        isGameOver = true;
+        stopTimer();
+        hintButton.disabled = true;
+        checkButton.disabled = true;
+
+        if (msg.includes("mistakes")) {
+            gameOverOverlay.classList.add('show');
+        } else { // For time's up
+            messageArea.style.color = '#FF6347'; // Tomato
+            messageArea.textContent = `Game Over! ${msg}`;
+        }
+
+        // Remove selection visuals
+        if (selectedCell) selectedCell.classList.remove('selected');
+        document.querySelectorAll('.number.selected').forEach(n => n.classList.remove('selected'));
+        selectedCell = null;
+        selectedNumber = null;
+    }
+
+    function toggleMusic() {
+        // Allow music control even when game is over
+        playTapSound();
+        if (bgMusic.paused) {
+            bgMusic.play().catch(e => {
+                messageArea.textContent = "Browser prevented music autoplay. Click again.";
+                console.warn("Music play failed:", e);
+            });
+            musicButton.textContent = "Pause Music";
+        } else {
+            bgMusic.pause();
+            musicButton.textContent = "Play Music";
+        }
+    }
+
+    function updateActiveButton(value, buttons, dataAttribute) {
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset[dataAttribute] === value) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    function applyTheme(themeName) {
+        // Remove existing theme classes
+        document.body.classList.remove('theme-ocean', 'theme-forest', 'theme-classic', 'theme-love', 'theme-matrix');
+        document.body.classList.add(`theme-${themeName}`);
+        localStorage.setItem('sudokuTheme', themeName);
+        updateActiveButton(themeName, themeBtns, 'theme');
+    }
+
+    // Event Listeners
+    checkButton.addEventListener('click', checkSolution);
+    newGameButton.addEventListener('click', () => initializeGame());
+    hintButton.addEventListener('click', giveHint);
+    musicButton.addEventListener('click', toggleMusic);
+
+    restartGameButton.addEventListener('click', () => {
+        initializeGame();
+    });
+
+    difficultyBtns.forEach(btn => {
+        btn.addEventListener('click', () => initializeGame(btn.dataset.difficulty));
+    });
+
+    themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const themeName = btn.dataset.theme;
+            applyTheme(themeName);
+        });
+    });
+
+    // On page load, check for a saved theme
+    const savedTheme = localStorage.getItem('sudokuTheme') || 'ocean';
+    applyTheme(savedTheme);
+
+    // Start the game
+    initializeGame();
+
+</script>
+
+</body>
+</html>
